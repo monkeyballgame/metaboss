@@ -113,6 +113,37 @@ pub fn decode_metadata_all(
     Ok(())
 }
 
+pub fn decode_metadata_lib(
+    client: &RpcClient,
+    account: Option<&String>,
+    full: bool,
+    list_path: Option<&String>,
+    output: &String,
+) -> AnyResult<Value> {
+
+    // Explicitly warn the user if they provide incorrect options combinations
+    if !is_only_one_option(&account, &list_path) {
+        return Err(anyhow!(
+            "Please specify either a mint account or a list of mint accounts, but not both."
+        ));
+    }
+
+    if let Some(mint_account) = account {
+        let metadata = decode(client, &mint_account)?;
+        let json_metadata = decode_to_json(metadata, full)?;
+//        let mut file = File::create(format!("{}/{}.json", output, mint_account))?;
+//        serde_json::to_writer(&mut file, &json_metadata)?;
+        return Ok(json_metadata)
+    } else if let Some(list_path) = list_path {
+        decode_metadata_all(client, &list_path, full, output)?;
+        return Ok(json! { "success" })
+    } else {
+        return Err(anyhow!(
+            "Please specify either a mint account or a list of mint accounts, but not both."
+        ));
+    };
+}
+
 pub fn decode_metadata(
     client: &RpcClient,
     account: Option<&String>,

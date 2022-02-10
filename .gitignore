@@ -3,3 +3,4 @@
 /temp
 /binaries
 .test_files
+*.so
