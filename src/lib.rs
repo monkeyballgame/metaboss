@@ -46,6 +46,7 @@ use crate::decode::decode_metadata_lib;
 use crate::mint::{mint_list, mint_one};
 use crate::update_metadata::*;
 //use crate::snapshot::{snapshot_cm_accounts, snapshot_holders, snapshot_mints};
+use crate::parse::is_only_one_option;
 
 
 fn setup_logging(log_level: String) -> Result<()> {
@@ -132,8 +133,12 @@ impl MonkeyBoss {
         Self { client, keypair }
     }
 
-    fn token_data(&self, account: String) -> PyResult<String> {
-        let full : bool = false;
+    fn token_data(&self, account: String, full: Option<bool>) -> PyResult<String> {
+        let (full, ) = if let Some(full) = full {
+            (full.clone(), )
+        } else {
+            (false,)
+        };
 
         let mut list_file = String::from("");
         let mut output = String::from("/Users/omerduskin/tmp/tmp/");
@@ -141,11 +146,7 @@ impl MonkeyBoss {
         let result = decode_metadata_lib(&self.client, Some(&account), full, None, &output);
 
         match result {
-            Ok(v) => {
-//                let s1: String = result.to_string();
-//                let obj: serde_json::Value = serde_json::from_str(s1).unwrap();
-                return Ok(v.to_string())
-            },
+            Ok(v) => return Ok(v.to_string()),
             Err(e) => return Ok(e.to_string()),
         }
     }
@@ -170,14 +171,42 @@ impl MonkeyBoss {
         Ok(())
     }
 
-    fn update_data(&self, account: String, new_data_file: String) -> PyResult<()> {
-        update_data_one(&self.client, &self.keypair, &account, &new_data_file);
+    fn update_data(&self, account: String, new_data_file: Option<String>, new_data_json: Option<String>) -> PyResult<()> {
+        if !is_only_one_option(&new_data_file, &new_data_json) {
+            return Err(anyhow!(
+                "Please specify either a new data file or a data json, but not both."
+            ));
+        }
+
+        if let Some(data_file) = new_data_file {
+            update_data_one(&self.client, &self.keypair, &account, &new_data_file);
+
+            return Ok(json! { "success" })
+        } else if let Some(data_json) = new_data_json {
+            update_data_one_from_json(&self.client, &self.keypair, &account, &data_json);
+
+            return Ok(json! { "success" })
+        } else {
+            return Err(anyhow!(
+                "Please specify either a new data file or a data json, but not both."
+            ));
+        };
+    }
+
+    fn update_data_all(&self, account: String, data_dir: String) -> PyResult<()> {
+        update_data_all(&self.client, &self.keypair, &data_dir);
 
         Ok(())
     }
 
     fn update_uri(&self, account: String, new_uri: String) -> PyResult<()> {
         update_uri_one(&self.client, &self.keypair, &account, &new_uri);
+
+        Ok(())
+    }
+
+    fn update_uri_all(&self, json_file: String) -> PyResult<()> {
+        update_uri_all(&self.client, &self.keypair, &json_file);
 
         Ok(())
     }

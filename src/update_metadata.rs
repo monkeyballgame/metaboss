@@ -26,6 +26,23 @@ use crate::data::{NFTData, UpdateNFTData, UpdateUriData};
 use crate::decode::{decode, get_metadata_pda};
 use crate::parse::{convert_local_to_remote_data, parse_keypair};
 
+pub fn update_data_one_from_json(
+    client: &RpcClient,
+    keypair: &String,
+    mint_account: &String,
+    json_data: &String,
+) -> Result<()> {
+    let keypair = parse_keypair(keypair)?;
+
+    let new_data: NFTData = serde_json::from_str(json_data).unwrap();
+
+    let data = convert_local_to_remote_data(new_data)?;
+
+    update_data(client, &keypair, mint_account, data)?;
+
+    Ok(())
+}
+
 pub fn update_data_one(
     client: &RpcClient,
     keypair: &String,
